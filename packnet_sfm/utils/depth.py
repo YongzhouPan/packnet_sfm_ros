@@ -50,16 +50,9 @@ def write_depth(filename, depth, intrinsics=None):
     """
     # If depth is a tensor
     if is_tensor(depth):
-        # torch.cuda.synchronize()
-        # start_time = time.perf_counter()
-        depth = depth.detach().squeeze().cpu()  # This is the bottle neck of 300mss
-        torch.cuda.synchronize()
-        # end_time = time.perf_counter()
-        # print("The download from gpu ", end_time - start_time)
-        depth2 = depth.numpy()
-        depth2 = cv2.resize(src=depth2, dsize=(1226, 370))
-        # print(depth2.shape)
-        depth2 = np.clip(depth2, 0, 80)
+
+        depth = depth.detach().squeeze().cpu()
+        depth = np.clip(depth, 0, 100)   # clipped to 80 M ref: monodepth2 paper
 
     # If intrinsics is a tensor
     if is_tensor(intrinsics):
@@ -72,8 +65,8 @@ def write_depth(filename, depth, intrinsics=None):
         # depth = transforms.ToPILImage()((depth * 256).int())
         # depth.save(filename)
 
-        depth2 = np.uint16(depth2 * 256)
-        cv2.imwrite(filename, depth2)
+        depth = np.uint16(depth * 256)
+        cv2.imwrite(filename, depth)
     # Something is wrong
     else:
         raise NotImplementedError('Depth filename not valid.')
