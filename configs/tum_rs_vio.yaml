@@ -1,0 +1,50 @@
+arch:
+    max_epochs: 30
+
+checkpoint:
+    # Folder where .ckpt files will be saved during training
+    filepath: /workspace/packnet-sfm/results/chept
+    save_top_k: -1
+
+model:
+    name: 'SelfSupModel'
+    # checkpoint_path: /workspace/packnet-sfm/results/chept/default_config-tum_rs_vio-2020.11.04-09h20m38s/epoch=04_rs_vio_rect-split_seq4-loss=0.000.ckpt
+    optimizer:
+        name: 'Adam'
+        depth:
+            lr: 0.000025
+        pose:
+            lr: 0.000025
+    scheduler:
+        name: 'StepLR'
+        step_size: 30
+        gamma: 0.5
+    depth_net:
+        name: 'PackNet01'
+        version: '1A'
+    pose_net:
+        name: 'PoseNet'
+        version: ''
+    params:
+        crop: 'garg'
+        min_depth: 0.0
+        max_depth: 80.0
+datasets:
+    augmentation:
+        # should be multiple of 32
+        image_shape: (352, 480)
+        # image_shape: (32, 32)
+    train:
+        batch_size: 4
+        dataset: ['KITTI']
+        path: ['/data/datasets/rs_vio_rect']
+        split: ['split_seq4.txt']
+        repeat: [10]
+    validation:
+        dataset: ['KITTI']
+        path: ['/data/datasets/rs_vio_rect']
+        split: ['split_seq4.txt']
+    test:
+        dataset: ['KITTI']
+        path: ['/data/datasets/rs_vio_rect']
+        split: ['split_seq4.txt']

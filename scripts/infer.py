@@ -4,7 +4,6 @@ import argparse
 import numpy as np
 import os
 import torch
-import time
 
 from glob import glob
 from cv2 import imwrite
@@ -12,12 +11,13 @@ from cv2 import imwrite
 from packnet_sfm.models.model_wrapper import ModelWrapper
 from packnet_sfm.datasets.augmentations import resize_image, to_tensor
 from packnet_sfm.utils.horovod import hvd_init, rank, world_size, print0
-from packnet_sfm.utils.image import load_image, interpolate_image
+from packnet_sfm.utils.image import load_image
 from packnet_sfm.utils.config import parse_test_file
 from packnet_sfm.utils.load import set_debug
 from packnet_sfm.utils.depth import write_depth, inv2depth, viz_inv_depth
 from packnet_sfm.utils.logging import pcolor
 
+starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
 
 def is_image(file, ext=('.png', '.jpg',)):
     """Check if a file is an image with certain extensions"""
@@ -66,9 +66,6 @@ def infer_and_save_depth(input_file, output_file, model_wrapper, image_shape, ha
     save: str
         Save format (npz or png)
     """
-    # pytorch time logging
-    starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
-
     if not is_image(output_file):
         # If not an image, assume it's a folder and append the input name
         os.makedirs(output_file, exist_ok=True)
@@ -79,7 +76,6 @@ def infer_and_save_depth(input_file, output_file, model_wrapper, image_shape, ha
 
     # Load image
     image = load_image(input_file)
-    original_height, original_width = image.size
     # Resize and to tensor
     image = resize_image(image, image_shape)
     image = to_tensor(image).unsqueeze(0)
@@ -89,23 +85,7 @@ def infer_and_save_depth(input_file, output_file, model_wrapper, image_shape, ha
         image = image.to('cuda:{}'.format(rank()), dtype=dtype)
 
     # Depth inference (returns predicted inverse depth)
-    starter.record()
-    pred_inv_depth = model_wrapper.depth(image)
-    ender.record()
-    # WAIT FOR GPU SYNC
-    torch.cuda.synchronize()
-    inference_time = starter.elapsed_time(ender)
-    print("Inference time ", inference_time)
-
-    # starter.record()
-    
-    pred_inv_depth_resized = interpolate_image(pred_inv_depth, (original_width, original_height), mode='bicubic')
-    
-    # ender.record()
-    
-    # torch.cuda.synchronize()
-    # interpolation_time = starter.elapsed_time(ender)
-    # print("interpolation time ", interpolation_time)
+    pred_inv_depth = model_wrapper.depth(image)[0]
 
     if save == 'npz' or save == 'png':
         # Get depth from predicted depth map and save to different formats
@@ -113,7 +93,7 @@ def infer_and_save_depth(input_file, output_file, model_wrapper, image_shape, ha
         print('Saving {} to {}'.format(
             pcolor(input_file, 'cyan', attrs=['bold']),
             pcolor(filename, 'magenta', attrs=['bold'])))
-        write_depth(filename, depth=inv2depth(pred_inv_depth_resized))
+        write_depth(filename, depth=inv2depth(pred_inv_depth))
     else:
         # Prepare RGB image
         rgb = image[0].permute(1, 2, 0).detach().cpu().numpy() * 255
@@ -126,7 +106,7 @@ def infer_and_save_depth(input_file, output_file, model_wrapper, image_shape, ha
             pcolor(input_file, 'cyan', attrs=['bold']),
             pcolor(output_file, 'magenta', attrs=['bold'])))
         imwrite(output_file, image[:, :, ::-1])
-    
+
 
 def main(args):
 
@@ -172,8 +152,13 @@ def main(args):
 
     # Process each file
     for fn in files[rank()::world_size()]:
+        starter.record()
         infer_and_save_depth(
             fn, args.output, model_wrapper, image_shape, args.half, args.save)
+        ender.record()
+        torch.cuda.synchronize()
+        infer_and_save_depth_time = starter.elapsed_time(ender)
+        print("process time: {}".format(infer_and_save_depth_time))
 
 
 if __name__ == '__main__':

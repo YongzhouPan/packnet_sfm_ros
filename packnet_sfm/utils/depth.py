@@ -1,7 +1,6 @@
 # Copyright 2020 Toyota Research Institute.  All rights reserved.
-import time
+
 import numpy as np
-import cv2
 import torch
 import torchvision.transforms as transforms
 from matplotlib.cm import get_cmap
@@ -37,8 +36,6 @@ def write_depth(filename, depth, intrinsics=None):
     """
     Write a depth map to file, and optionally its corresponding intrinsics.
 
-    This code is modified to export compatible-format depth image to openVSLAM
-
     Parameters
     ----------
     filename : str
@@ -50,10 +47,7 @@ def write_depth(filename, depth, intrinsics=None):
     """
     # If depth is a tensor
     if is_tensor(depth):
-
         depth = depth.detach().squeeze().cpu()
-        depth = np.clip(depth, 0, 100)   # clipped to 80 M ref: monodepth2 paper
-
     # If intrinsics is a tensor
     if is_tensor(intrinsics):
         intrinsics = intrinsics.detach().cpu()
@@ -62,11 +56,8 @@ def write_depth(filename, depth, intrinsics=None):
         np.savez_compressed(filename, depth=depth, intrinsics=intrinsics)
     # If we are saving as a .png
     elif filename.endswith('.png'):
-        # depth = transforms.ToPILImage()((depth * 256).int())
-        # depth.save(filename)
-
-        depth = np.uint16(depth * 256)
-        cv2.imwrite(filename, depth)
+        depth = transforms.ToPILImage()((depth * 256).int())
+        depth.save(filename)
     # Something is wrong
     else:
         raise NotImplementedError('Depth filename not valid.')
@@ -126,8 +117,7 @@ def inv2depth(inv_depth):
     if is_seq(inv_depth):
         return [inv2depth(item) for item in inv_depth]
     else:
-        # return 1. / inv_depth.clamp(min=1e-6, max=80)
-        return 1. / inv_depth
+        return 1. / inv_depth.clamp(min=1e-6)
 
 
 def depth2inv(depth):

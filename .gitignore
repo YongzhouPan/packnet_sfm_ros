@@ -103,7 +103,8 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-inference/
+inferences/
+trained_models/
 data/
 .vscode/
 model/
