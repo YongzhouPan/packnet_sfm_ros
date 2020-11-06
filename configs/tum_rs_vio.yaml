@@ -48,3 +48,11 @@ datasets:
         dataset: ['KITTI']
         path: ['/data/datasets/rs_vio_rect']
         split: ['split_seq4.txt']
+
+wandb:
+    dry_run: False                                 # Wandb dry-run (not logging)
+    name: 'Surf'                                       # Wandb run name
+    project: "packnet_sfm_training"  # Wandb project
+    entity: "surfii3z"    # Wandb entity
+    tags: []                                      # Wandb tags
+    dir: ''                                       # Wandb save folder
