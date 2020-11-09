@@ -109,3 +109,4 @@ data/
 .vscode/
 model/
 wandb/
+results/
