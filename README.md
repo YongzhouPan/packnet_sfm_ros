@@ -1,7 +1,7 @@
 # Note
 1) Convert images sequences to videos
 ```bash
-ffmpeg -i %06d.png -c:v libx264 -vf fps=25 -pix_fmt yuv420p out.mp4
+ffmpeg -framerate 20 -i %06d.png -codec copy output.mp4
 ```
 
 2) Consider rectify image before do the unsupervised learning
