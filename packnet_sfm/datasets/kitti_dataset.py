@@ -31,6 +31,11 @@ OXTS_POSE_DATA = 'oxts'
 #### FUNCTIONS
 ########################################################################################################################
 
+def dummy_calibration():
+    return np.array([[371.74580354175663 , 0.    , 397.5],
+                     [0.    , 371.74580354175663 , 297.0],
+                     [0.    , 0.    , 1.          ]])
+
 def read_npz_depth(file, depth_type):
     """Reads a .npz depth map given a certain depth_type."""
     depth = np.load(file)[depth_type + '_depth'].astype(np.float32)
@@ -355,16 +360,20 @@ class KITTIDataset(Dataset):
             'rgb': load_image(self.paths[idx]),
         }
 
-        # Add intrinsics
-        parent_folder = self._get_parent_folder(self.paths[idx])
-        if parent_folder in self.calibration_cache:
-            c_data = self.calibration_cache[parent_folder]
-        else:
-            c_data = self._read_raw_calib_file(parent_folder)
-            self.calibration_cache[parent_folder] = c_data
+        # # Add intrinsics
+        # parent_folder = self._get_parent_folder(self.paths[idx])
+        # if parent_folder in self.calibration_cache:
+        #     c_data = self.calibration_cache[parent_folder]
+        # else:
+        #     c_data = self._read_raw_calib_file(parent_folder)
+        #     self.calibration_cache[parent_folder] = c_data
+        # sample.update({
+        #     'intrinsics': self._get_intrinsics(self.paths[idx], c_data),
+        # })
         sample.update({
-            'intrinsics': self._get_intrinsics(self.paths[idx], c_data),
+            'intrinsics': dummy_calibration(),
         })
+
 
         # Add pose information if requested
         if self.with_pose:

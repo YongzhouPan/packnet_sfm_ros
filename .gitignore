@@ -103,7 +103,9 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-inference/
 data/
 .vscode/
-model/
+trained_models/
+rs_docker.sh
+results/
+wandb/
