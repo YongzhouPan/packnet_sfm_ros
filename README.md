@@ -1,3 +1,13 @@
+# Note
+1) Convert images sequences to videos
+```bash
+ffmpeg -framerate 20 -i %06d.png -codec copy output.mp4
+```
+
+2) Consider rectify image before do the unsupervised learning
+> use [image_undistort](https://github.com/surfii3z/image_undistort) to rectify/ scale the image 
+> use the intrinsic parameter of the rectify image in the training
+
 ## PackNet-SfM: 3D Packing for Self-Supervised Monocular Depth Estimation
 
 [Install](#install) // [Datasets](#datasets) // [Training](#training) // [Evaluation](#evaluation) // [Models](#models) // [License](#license) // [References](#references)
