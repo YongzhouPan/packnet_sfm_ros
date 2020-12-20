@@ -170,4 +170,5 @@ class DepthInference:
 
 if __name__ == "__main__":
     rospy.init_node('packnet_sfm_node')
+    hvd_init()
     depth_inference_node = DepthInference()
