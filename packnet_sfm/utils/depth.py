@@ -9,6 +9,8 @@ from matplotlib.cm import get_cmap
 from packnet_sfm.utils.image import load_image, gradient_x, gradient_y, flip_lr, interpolate_image
 from packnet_sfm.utils.types import is_seq, is_tensor
 
+MIN_DEPTH = 0.1
+MAX_DEPTH = 100
 
 def load_depth(file):
     """
@@ -52,7 +54,7 @@ def write_depth(filename, depth, intrinsics=None):
     if is_tensor(depth):
 
         depth = depth.detach().squeeze().cpu()
-        depth = np.clip(depth, 0, 100)   # clipped to 80 M ref: monodepth2 paper
+        # depth = np.clip(depth, 0, 100)   # clipped to 80 M ref: monodepth2 paper
 
     # If intrinsics is a tensor
     if is_tensor(intrinsics):
@@ -62,9 +64,8 @@ def write_depth(filename, depth, intrinsics=None):
         np.savez_compressed(filename, depth=depth, intrinsics=intrinsics)
     # If we are saving as a .png
     elif filename.endswith('.png'):
-        # depth = transforms.ToPILImage()((depth * 256).int())
-        # depth.save(filename)
 
+        depth = np.clip(depth, 0, 80)
         depth = np.uint16(depth * 256)
         cv2.imwrite(filename, depth)
     # Something is wrong
@@ -126,8 +127,12 @@ def inv2depth(inv_depth):
     if is_seq(inv_depth):
         return [inv2depth(item) for item in inv_depth]
     else:
-        # return 1. / inv_depth.clamp(min=1e-6, max=80)
-        return 1. / inv_depth
+        # min_disp = 1 / MAX_DEPTH
+        # max_disp = 1 / MIN_DEPTH
+        # scaled_disp = min_disp + (max_disp - min_disp) * inv_depth
+        # return 1 / scaled_disp
+
+        return 1. / inv_depth.clamp(min=1e-6)
 
 
 def depth2inv(depth):

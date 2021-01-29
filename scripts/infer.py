@@ -12,7 +12,7 @@ from cv2 import imwrite
 from packnet_sfm.models.model_wrapper import ModelWrapper
 from packnet_sfm.datasets.augmentations import resize_image, to_tensor
 from packnet_sfm.utils.horovod import hvd_init, rank, world_size, print0
-from packnet_sfm.utils.image import load_image, interpolate_image
+from packnet_sfm.utils.image import load_image, interpolate_image, interpolate_scales
 from packnet_sfm.utils.config import parse_test_file
 from packnet_sfm.utils.load import set_debug
 from packnet_sfm.utils.depth import write_depth, inv2depth, viz_inv_depth
@@ -97,15 +97,10 @@ def infer_and_save_depth(input_file, output_file, model_wrapper, image_shape, ha
     inference_time = starter.elapsed_time(ender)
     print("Inference time ", inference_time)
 
-    # starter.record()
-    
-    pred_inv_depth_resized = interpolate_image(pred_inv_depth, (original_width, original_height), mode='bicubic')
-    
-    # ender.record()
-    
-    # torch.cuda.synchronize()
-    # interpolation_time = starter.elapsed_time(ender)
-    # print("interpolation time ", interpolation_time)
+    # interpolate as in Monodepth2
+    pred_inv_depth_resized = interpolate_image(pred_inv_depth,
+                                                shape=(original_width, original_height),
+                                                mode='bilinear', align_corners=False)
 
     if save == 'npz' or save == 'png':
         # Get depth from predicted depth map and save to different formats

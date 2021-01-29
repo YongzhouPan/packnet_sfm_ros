@@ -1,0 +1,11 @@
+python3 scripts/infer.py --checkpoint trained_models/PackNet01_HR_velsup_CStoK.ckpt --input /data/datasets/kitti_odom_color/sequences/00/image_2/ --output inferences/00 --save png
+python3 scripts/infer.py --checkpoint trained_models/PackNet01_HR_velsup_CStoK.ckpt --input /data/datasets/kitti_odom_color/sequences/01/image_2/ --output inferences/01 --save png
+python3 scripts/infer.py --checkpoint trained_models/PackNet01_HR_velsup_CStoK.ckpt --input /data/datasets/kitti_odom_color/sequences/02/image_2/ --output inferences/02 --save png
+python3 scripts/infer.py --checkpoint trained_models/PackNet01_HR_velsup_CStoK.ckpt --input /data/datasets/kitti_odom_color/sequences/03/image_2/ --output inferences/03 --save png
+python3 scripts/infer.py --checkpoint trained_models/PackNet01_HR_velsup_CStoK.ckpt --input /data/datasets/kitti_odom_color/sequences/04/image_2/ --output inferences/04 --save png
+python3 scripts/infer.py --checkpoint trained_models/PackNet01_HR_velsup_CStoK.ckpt --input /data/datasets/kitti_odom_color/sequences/05/image_2/ --output inferences/05 --save png
+python3 scripts/infer.py --checkpoint trained_models/PackNet01_HR_velsup_CStoK.ckpt --input /data/datasets/kitti_odom_color/sequences/06/image_2/ --output inferences/06 --save png
+python3 scripts/infer.py --checkpoint trained_models/PackNet01_HR_velsup_CStoK.ckpt --input /data/datasets/kitti_odom_color/sequences/07/image_2/ --output inferences/07 --save png
+python3 scripts/infer.py --checkpoint trained_models/PackNet01_HR_velsup_CStoK.ckpt --input /data/datasets/kitti_odom_color/sequences/08/image_2/ --output inferences/08 --save png
+python3 scripts/infer.py --checkpoint trained_models/PackNet01_HR_velsup_CStoK.ckpt --input /data/datasets/kitti_odom_color/sequences/09/image_2/ --output inferences/09 --save png
+python3 scripts/infer.py --checkpoint trained_models/PackNet01_HR_velsup_CStoK.ckpt --input /data/datasets/kitti_odom_color/sequences/10/image_2/ --output inferences/10 --save png

@@ -99,6 +99,10 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
 
 def main(args):
 
+    # pytorch time logging
+    starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+    counter = 0
+
     # Initialize horovod
     hvd_init()
 
@@ -144,7 +148,7 @@ def main(args):
     else:
         raise RuntimeError("Output needs to be a file")
         
-
+    time = 0
     # Process each file
     list_of_files = list(zip(files[rank()  :-2:world_size()],
                               files[rank()+1:-1:world_size()],
@@ -154,12 +158,20 @@ def main(args):
     if args.limit:
         list_of_files = list_of_files[:args.limit]
     for fn1, fn2, fn3 in list_of_files:
+        starter.record()
         infer_and_save_pose([fn1, fn3], fn2, model_wrapper, image_shape, args.half, args.save)
+        ender.record()
+        torch.cuda.synchronize()
+        inference_time = starter.elapsed_time(ender)
+        print("Counter: {} , Inference time: {}".format(counter, inference_time))
+        counter += 1
+        time += inference_time
+        
 
     position = np.zeros(3)
     orientation = np.eye(3)
     f = open(args.output + ".txt", 'w')
-
+    print("Open the file")
     for key in sorted(poses.keys()):
         
         rot_matrix, translation = poses[key]
@@ -173,10 +185,13 @@ def main(args):
         # print(torch.tensor(orientation))
         q = transforms.matrix_to_quaternion(torch.tensor(orientation))
         q = q.numpy()
-        # print(q[0])
+
+        # print(q)
         # print(position)
 
-        f.write("%.10f %.10f %.10f %.10f %.10f %.10f %.10f\n" % (position[0], position[1], position[2], q[0][3], q[0][2], q[0][1], q[0][0]))
+        f.write("{:6f} {:6f} {:6f} {:6f} ".format(*orientation[0], position[0]))
+        f.write("{:6f} {:6f} {:6f} {:6f} ".format(*orientation[1], position[1]))
+        f.write("{:6f} {:6f} {:6f} {:6f}\n".format(*orientation[2], position[2]))
         # f.write("{.10f} {.10f} {.10f} {.10f} {.10f} {.10f} {.10f}"
                 # .format(position[0], position[1], position[2], q[0][1], q[0][2], q[0][3], q[0][0]))
         # poses[key] = {"rot": rot_matrix.tolist(),
@@ -190,7 +205,7 @@ def main(args):
                                
     # json.dump(poses, open(args.output, "w"), sort_keys=True)
     print(f"Written pose of {len(list_of_files)} images to {args.output}")
-
+    print("avg tracking time: {}".format(time / len(list_of_files)))
 
 if __name__ == '__main__':
     args = parse_args()

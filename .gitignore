@@ -105,7 +105,13 @@ venv.bak/
 
 data/
 .vscode/
-trained_models/
+# trained_models/
 rs_docker.sh
 results/
 wandb/
+
+depth_infer/
+trained_models/
+
+*.zip
+
