@@ -1,3 +1,7 @@
+# NOTE
+
+Use align_corners=False when doing upsampling. Follow this [link](https://machinethink.net/blog/coreml-upsampling/)
+
 ## Pre-requisite
 1) Configure ROS to be able to use with Python3 and cv_bridge following this [link](https://medium.com/@beta_b0t/how-to-setup-ros-with-python-3-44a69ca36674)
 ```bash
