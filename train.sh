@@ -1,0 +1,1 @@
+make docker-run COMMAND="sh _train_in_docker.sh"

@@ -32,8 +32,11 @@ OXTS_POSE_DATA = 'oxts'
 ########################################################################################################################
 
 def dummy_calibration():
-    return np.array([[371.74580354175663 , 0.    , 397.5],
-                     [0.    , 371.74580354175663 , 297.0],
+    # return np.array([[371.74580354175663 , 0.    , 397.5],
+    #                  [0.    , 371.74580354175663 , 297.0],
+    #                  [0.    , 0.    , 1.          ]])
+    return np.array([[929.0837415000001 , 0.    , 466.5],
+                     [0.    , 929.0837415000001 , 354.0],
                      [0.    , 0.    , 1.          ]])
 
 def read_npz_depth(file, depth_type):
@@ -356,7 +359,7 @@ class KITTIDataset(Dataset):
         # Add image information
         sample = {
             'idx': idx,
-            'filename': '%s_%010d' % (self.split, idx),
+            'filename': '%s_%06d' % (self.split, idx),
             'rgb': load_image(self.paths[idx]),
         }
 
