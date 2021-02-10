@@ -1,0 +1,238 @@
+#!/usr/bin/env python3
+import time
+
+import rospy
+import rospkg
+from sensor_msgs.msg import Image
+
+import tensorrt as trt
+import pycuda.driver as cuda
+import pycuda.autoinit
+
+import numpy as np
+import torch
+
+import cv2
+from cv_bridge import CvBridge, CvBridgeError
+
+from packnet_sfm.models.model_wrapper import ModelWrapper
+from packnet_sfm.datasets.augmentations import to_tensor
+from packnet_sfm.utils.horovod import hvd_init, rank
+from packnet_sfm.utils.image import interpolate_image
+from packnet_sfm.utils.config import parse_test_file
+from packnet_sfm.utils.depth import inv2depth
+
+from packnet_sfm.utils.types import is_seq, is_tensor
+
+STEREO_SCALE_FACTOR = 10
+
+MODEL_NAME = "trt_packnet"
+starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+
+class TrtPacknet(object):
+    """TrtPacknet class encapsulates things needed to run TRT Packnet (depth inference)."""
+
+    def _load_engine(self):
+        # TRTbin = '%s.trt' % self.model
+        TRTbin = "/home/nvadmin/packnet_ws/src/packnet_sfm_ros/ros/trt_packnet.trt"
+        with open(TRTbin, 'rb') as f, trt.Runtime(self.trt_logger) as runtime:
+            return runtime.deserialize_cuda_engine(f.read())
+
+    def _allocate_buffers(self):
+        host_inputs, host_outputs, cuda_inputs, cuda_outputs, bindings = \
+            [], [], [], [], []
+        for binding in self.engine:
+            size = trt.volume(self.engine.get_binding_shape(binding)) * \
+                    self.engine.max_batch_size
+            host_mem = cuda.pagelocked_empty(size, np.float32)
+            cuda_mem = cuda.mem_alloc(host_mem.nbytes)
+            bindings.append(int(cuda_mem))
+            if self.engine.binding_is_input(binding):
+                host_inputs.append(host_mem)
+                cuda_inputs.append(cuda_mem)
+            else:
+                host_outputs.append(host_mem)
+                cuda_outputs.append(cuda_mem)
+        return host_inputs, host_outputs, cuda_inputs, cuda_outputs, bindings
+    
+    def __init__(self, model="trt_packnet", input_shape=(288, 384), cuda_ctx=None):
+        """Initialize TensorRT plugins, engine and conetxt."""
+        self.model = model
+        self.input_shape = input_shape
+        self.cuda_ctx = cuda.Device(0).make_context()
+        if self.cuda_ctx:
+            self.cuda_ctx.push()
+
+        self.trt_logger = trt.Logger(trt.Logger.INFO)
+        self.engine = self._load_engine()
+
+        try:
+            self.context = self.engine.create_execution_context()
+            self.stream = cuda.Stream()
+            self.host_inputs, self.host_outputs, self.cuda_inputs, self.cuda_outputs, self.bindings = self._allocate_buffers()
+        except Exception as e:
+            raise RuntimeError('fail to allocate CUDA resources') from e
+        finally:
+            if self.cuda_ctx:
+                self.cuda_ctx.pop()
+    
+    def __del__(self):
+        """Free CUDA memories and context."""
+        del self.cuda_outputs
+        del self.cuda_inputs
+        del self.stream
+
+    def _preprocess(self, img, input_shape=(384, 288)):
+        # shrink the image to fit NN input
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        # rgb_image = cv2.resize(rgb_image, (self.network_input_shape[1], self.network_input_shape[0]), interpolation=cv2.INTER_LANCZOS4)
+        img = cv2.resize(img, input_shape, interpolation=cv2.INTER_LANCZOS4)
+        return img
+    
+    def _postprocess(self, ):
+        pass
+
+    def infer_depth(self, img):
+        img_resized = self._preprocess(img)
+        np.copyto(self.host_inputs[0], img_resized.ravel())
+
+        if self.cuda_ctx:
+            self.cuda_ctx.push()
+        cuda.memcpy_htod_async(
+            self.cuda_inputs[0], self.host_inputs[0], self.stream)
+        self.context.execute_async(
+            batch_size=1,
+            bindings=self.bindings,
+            stream_handle=self.stream.handle)
+        cuda.memcpy_dtoh_async(
+            self.host_outputs[0], self.cuda_outputs[0], self.stream)
+        self.stream.synchronize()
+        if self.cuda_ctx:
+            self.cuda_ctx.pop()
+
+        output = self.host_outputs[0]
+        return output
+
+
+
+class DepthInference(object):
+    def __init__(self):
+        self.bridge = CvBridge()
+        ## Communication
+        # queue_size=None to process only the last message
+        rospy.loginfo("Setting up publisher and subscriber ..")
+        self.pub_rgb_image = rospy.Publisher('/packnet/color/image_raw', Image, queue_size=1)
+        self.pub_depth_image = rospy.Publisher('/packnet/depth/image_raw', Image, queue_size=1)
+
+        rospy.Subscriber("/camera/color/image_raw", Image, self.cb_image, queue_size=1)
+
+        self.cuda_ctx = cuda.Device(0).make_context()
+        self.trt_packnet = TrtPacknet()
+
+        rospy.loginfo("Ready")
+    
+    def __del__(self):
+        self.cuda_ctx.pop()
+        del self.trt_packnet
+        del self.cuda_ctx
+
+    def clean_up(self):
+        """ Backup destructor: Release cuda memory """
+        if self.trt_packnet is not None:
+            self.cuda_ctx.pop()
+            del self.trt_packnet
+            del self.cuda_ctx
+
+
+
+    def process(self, rgb_img_msg):
+
+        rospy.loginfo("process seq: {}".format(rgb_img_msg.header.seq))
+        try:
+            rgb_image = self.bridge.imgmsg_to_cv2(rgb_img_msg, "bgr8")
+        except CvBridgeError as e:
+            rospy.loginfo(e)
+            
+        output = self.trt_packnet.infer_depth(rgb_image)
+
+        output_data = torch.Tensor(output).reshape((1, 1, 288, 384))
+
+        # resize from PIL image and cv2 has different convention about the image shape 
+        pred_inv_depth_resized = interpolate_image(output_data, (self.original_input_shape[0], self.original_input_shape[1]), mode='bilinear', align_corners=False)
+        
+        # convert inverse depth to depth image
+        depth_img = self.write_depth(self.inv2depth(pred_inv_depth_resized))
+
+        depth_img_msg = self.bridge.cv2_to_imgmsg(depth_img, encoding="mono16")
+
+        # define the header
+        rgb_img_msg.header.stamp = rospy.Time.now()
+        depth_img_msg.header.stamp = rospy.Time.now()
+        rgb_img_msg.header.frame_id = "left_image"
+        depth_img_msg.header.frame_id = "left_image"
+        depth_img_msg.header.seq = rgb_img_msg.header.seq
+        
+        # publish the image and depth_image
+        self.pub_rgb_image.publish(rgb_img_msg)
+        self.pub_depth_image.publish(depth_img_msg)
+
+    def inv2depth(self, inv_depth):
+        """
+        Invert an inverse depth map to produce a depth map
+
+        Parameters
+        ----------
+        inv_depth : torch.Tensor or list of torch.Tensor [B,1,H,W]
+            Inverse depth map
+
+        Returns
+        -------
+        depth : torch.Tensor or list of torch.Tensor [B,1,H,W]
+            Depth map
+        """
+        if is_seq(inv_depth):
+            return [inv2depth(item) for item in inv_depth]
+        else:
+            return 1. * STEREO_SCALE_FACTOR / inv_depth
+
+
+    def write_depth(self, depth):
+        """
+        Write a depth map to file, and optionally its corresponding intrinsics.
+
+        This code is modified to export compatible-format depth image to openVSLAM
+
+        Parameters
+        ----------
+        depth : np.array [H,W]
+            Depth map
+        """
+        # If depth is a tensor
+        if is_tensor(depth):
+            depth = depth.detach().squeeze().cpu()
+            depth = np.clip(depth, 0, 100)
+
+            # make depth image to 16 bit format following TUM RGBD dataset format
+            # it is also ROS standard(?)
+            depth = np.uint16(depth * 256)  
+
+        return depth
+
+    def cb_image(self, data):
+        
+        self.original_input_shape = (data.height, data.width)
+        
+        self.process(data)
+
+
+if __name__ == "__main__":
+    depth_inference_node = DepthInference()
+    rospy.init_node('packnet_sfm_node')
+    rospy.loginfo("Ready to infer")
+    hvd_init()
+    try:
+        rospy.spin()
+    except KeyboardInterrupt:
+        rospy.on_shutdown(depth_inference_node.clean_up())
+        print("Shutting down")
+    

@@ -163,6 +163,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   ros/packnet_sfm_node
+  ros/trt_packnet_node
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
