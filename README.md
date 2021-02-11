@@ -1,3 +1,11 @@
+# How to prepare TensorRT model
+We need to convert packnet weight (e.g. packnet.ckpt) to .ONNX format and then convert it to .trt format
+
+1) packnet_to_onnx.py
+   -   change `PACKNET_TRAINED_WEIGHT` to `/path/to/weight.ckpt`
+   -   change `MODEL_NAME`
+   -   change dimension of `input_pyt` to the network input size 
+
 # NOTE
 
 Use align_corners=False when doing upsampling. Follow this [link](https://machinethink.net/blog/coreml-upsampling/)
