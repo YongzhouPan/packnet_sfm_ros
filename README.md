@@ -1,10 +1,16 @@
 # How to prepare TensorRT model
 We need to convert packnet weight (e.g. packnet.ckpt) to .ONNX format and then convert it to .trt format
 
+Tested with `Ubuntu 18.04 LTS`, `python 3.6.9`, `TensorRT 7.1.1.3`, `PyTorch 1.4.0` and `Cuda 11.0`
+
 1) packnet_to_onnx.py
    -   change `PACKNET_TRAINED_WEIGHT` to `/path/to/weight.ckpt`
    -   change `MODEL_NAME`
    -   change dimension of `input_pyt` to the network input size 
+
+2) onnx_to_trt.py
+   -   change `ONNX_FILE_PATH` to `/path/to/model.onnx`
+   -   
 
 # NOTE
 
