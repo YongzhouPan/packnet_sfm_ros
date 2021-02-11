@@ -11,38 +11,27 @@ from packnet_sfm.utils.image import load_image
 from packnet_sfm.datasets.augmentations import resize_image, to_tensor
 from packnet_sfm.utils.depth import write_depth, inv2depth, viz_inv_depth
 
-ONNX_FILE_PATH = '/home/nvadmin/TensorRT-7.1.3.4/samples/python/onnx_packnet/model.onnx'
-
+NET_INPUT_W = 640
+NET_INPUT_H = 192
+TRT_FILE_PATH = "/home/nvadmin/packnet_ws/src/packnet_sfm_ros/ros/trt_packnet_sfm/src/packnet_kitti.trt"
+# TRT_FILE_PATH = "/home/nvadmin/packnet_ws/src/packnet_sfm_ros/ros/trt_packnet.trt"
 # logger to capture errors, warnings, and other information during the build and inference phases
 TRT_LOGGER = trt.Logger()
-logging_time = False
+logging_time = True
 
-def build_engine(onnx_file_path):
+def build_engine(trt_file_path):
     # initialize TensorRT engine and parse ONNX model
     builder = trt.Builder(TRT_LOGGER)
     explicit_batch = 1 << (int)(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
     network = builder.create_network(explicit_batch)
     parser = trt.OnnxParser(network, TRT_LOGGER)
 
-    # parse ONNX
-    with open(onnx_file_path, 'rb') as model:
-        print('Beginning ONNX file parsing')
-        parser.parse(model.read())
-    print('Completed parsing of ONNX file')
+    TRTbin = TRT_FILE_PATH
+    with open(TRTbin, 'rb') as f, trt.Runtime(TRT_LOGGER) as runtime:
+        print('Beginning TRT file parsing')
+        engine = runtime.deserialize_cuda_engine(f.read())
+    print('Completed parsing of TRT file')
 
-    # allow TensorRT to use up to 1GB of GPU memory for tactic selection
-    builder.max_workspace_size = 8 << 30
-
-    # we have only one image in batch
-    builder.max_batch_size = 1
-
-    # use FP16 mode if possible
-    if builder.platform_has_fast_fp16:
-        builder.fp16_mode = True
-    
-        # generate TensorRT engine optimized for the target platform
-    print('Building an engine...')
-    engine = builder.build_cuda_engine(network)
     context = engine.create_execution_context()
     print("Completed creating Engine")
 
@@ -50,7 +39,7 @@ def build_engine(onnx_file_path):
 
 def preprocess_data(input_file):
 
-    image_shape = (288, 384)
+    image_shape = (NET_INPUT_H, NET_INPUT_W)
     # Load image
     image = load_image(input_file)
     # Resize and to tensor
@@ -63,7 +52,7 @@ def preprocess_data(input_file):
     
 def main():
     # initialize TensorRT engine and parse ONNX model
-    engine, context = build_engine(ONNX_FILE_PATH)
+    engine, context = build_engine(TRT_FILE_PATH)
 
     # get sizes of input and output and allocate memory required for input data and for output data
     for binding in engine:
@@ -82,8 +71,11 @@ def main():
 
     for i in range(10):
         # preprocess input data
-        rgb_image = preprocess_data("/home/nvadmin/TensorRT-7.1.3.4/samples/python/onnx_packnet/00000{}.png".format(i))
+        # rgb_image = preprocess_data("/home/nvadmin/TensorRT-7.1.3.4/samples/python/onnx_packnet/00000{}.png".format(i))
+        rgb_image = preprocess_data("/data/datasets/KITTI_odom_rgb/00/image_2/00000{}.png".format(i))
         host_input = rgb_image.numpy()
+        # print(type(rgb_image.numpy()), rgb_image.numpy().shape)
+
         cuda.memcpy_htod_async(device_input, host_input, stream)
 
         # run inference
@@ -101,19 +93,17 @@ def main():
 
         stream.synchronize()
 
-            
-
         # postprocess results
-        output_data = torch.Tensor(host_output).reshape((1, 1, 288, 384))
+        output_data = torch.Tensor(host_output).reshape((1, 1, NET_INPUT_H, NET_INPUT_W))
 
         rgb = rgb_image[0].permute(1, 2, 0).detach().cpu().numpy() * 255
         viz_pred_inv_depth = viz_inv_depth(output_data[0][0]) * 255
 
         save_image = np.concatenate([rgb, viz_pred_inv_depth], 0)
-        imwrite("/home/nvadmin/TensorRT-7.1.3.4/samples/python/onnx_packnet/00000{}_out.png".format(i), save_image[:, :, ::-1])
+        imwrite("/home/nvadmin/TensorRT-7.1.3.4/samples/python/onnx_packnet/output_00000{}.png".format(i), save_image[:, :, ::-1])
 
 
-
+    print("finish inference")
 
 
 if __name__ == '__main__':

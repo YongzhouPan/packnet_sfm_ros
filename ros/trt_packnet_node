@@ -17,16 +17,18 @@ from cv_bridge import CvBridge, CvBridgeError
 
 from packnet_sfm.models.model_wrapper import ModelWrapper
 from packnet_sfm.datasets.augmentations import to_tensor
-from packnet_sfm.utils.horovod import hvd_init, rank
+from packnet_sfm.utils.horovod import hvd_init
 from packnet_sfm.utils.image import interpolate_image
-from packnet_sfm.utils.config import parse_test_file
 from packnet_sfm.utils.depth import inv2depth
-
+from packnet_sfm.utils.depth import viz_inv_depth
 from packnet_sfm.utils.types import is_seq, is_tensor
 
-STEREO_SCALE_FACTOR = 10
+STEREO_SCALE_FACTOR = 1
 
-MODEL_NAME = "trt_packnet"
+TRT_FILE_PATH = "/home/nvadmin/packnet_ws/src/packnet_sfm_ros/ros/trt_packnet_sfm/src/packnet_kitti.trt"
+NET_INPUT_W = 640
+NET_INPUT_H = 192
+
 starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
 
 class TrtPacknet(object):
@@ -34,7 +36,7 @@ class TrtPacknet(object):
 
     def _load_engine(self):
         # TRTbin = '%s.trt' % self.model
-        TRTbin = "/home/nvadmin/packnet_ws/src/packnet_sfm_ros/ros/trt_packnet.trt"
+        TRTbin = TRT_FILE_PATH
         with open(TRTbin, 'rb') as f, trt.Runtime(self.trt_logger) as runtime:
             return runtime.deserialize_cuda_engine(f.read())
 
@@ -55,10 +57,10 @@ class TrtPacknet(object):
                 cuda_outputs.append(cuda_mem)
         return host_inputs, host_outputs, cuda_inputs, cuda_outputs, bindings
     
-    def __init__(self, model="trt_packnet", input_shape=(288, 384), cuda_ctx=None):
+    def __init__(self, model="trt_packnet", cuda_ctx=None):
         """Initialize TensorRT plugins, engine and conetxt."""
         self.model = model
-        self.input_shape = input_shape
+        self.net_input_shape = (NET_INPUT_H, NET_INPUT_W)
         self.cuda_ctx = cuda.Device(0).make_context()
         if self.cuda_ctx:
             self.cuda_ctx.push()
@@ -82,99 +84,21 @@ class TrtPacknet(object):
         del self.cuda_inputs
         del self.stream
 
-    def _preprocess(self, img, input_shape=(384, 288)):
+    def _preprocess(self, img):
         # shrink the image to fit NN input
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        # rgb_image = cv2.resize(rgb_image, (self.network_input_shape[1], self.network_input_shape[0]), interpolation=cv2.INTER_LANCZOS4)
-        img = cv2.resize(img, input_shape, interpolation=cv2.INTER_LANCZOS4)
+        img = cv2.resize(img, (NET_INPUT_W, NET_INPUT_H), interpolation=cv2.INTER_LANCZOS4)
+        
+        # to switch the dimension from (H, W, 3) -> (1, 3, H, W) so that it's compatible with packnet 
+        img = to_tensor(img).unsqueeze(0)
+        img = img.numpy()
         return img
     
-    def _postprocess(self, ):
-        pass
-
-    def infer_depth(self, img):
-        img_resized = self._preprocess(img)
-        np.copyto(self.host_inputs[0], img_resized.ravel())
-
-        if self.cuda_ctx:
-            self.cuda_ctx.push()
-        cuda.memcpy_htod_async(
-            self.cuda_inputs[0], self.host_inputs[0], self.stream)
-        self.context.execute_async(
-            batch_size=1,
-            bindings=self.bindings,
-            stream_handle=self.stream.handle)
-        cuda.memcpy_dtoh_async(
-            self.host_outputs[0], self.cuda_outputs[0], self.stream)
-        self.stream.synchronize()
-        if self.cuda_ctx:
-            self.cuda_ctx.pop()
-
-        output = self.host_outputs[0]
-        return output
-
-
-
-class DepthInference(object):
-    def __init__(self):
-        self.bridge = CvBridge()
-        ## Communication
-        # queue_size=None to process only the last message
-        rospy.loginfo("Setting up publisher and subscriber ..")
-        self.pub_rgb_image = rospy.Publisher('/packnet/color/image_raw', Image, queue_size=1)
-        self.pub_depth_image = rospy.Publisher('/packnet/depth/image_raw', Image, queue_size=1)
-
-        rospy.Subscriber("/camera/color/image_raw", Image, self.cb_image, queue_size=1)
-
-        self.cuda_ctx = cuda.Device(0).make_context()
-        self.trt_packnet = TrtPacknet()
-
-        rospy.loginfo("Ready")
-    
-    def __del__(self):
-        self.cuda_ctx.pop()
-        del self.trt_packnet
-        del self.cuda_ctx
-
-    def clean_up(self):
-        """ Backup destructor: Release cuda memory """
-        if self.trt_packnet is not None:
-            self.cuda_ctx.pop()
-            del self.trt_packnet
-            del self.cuda_ctx
-
-
-
-    def process(self, rgb_img_msg):
-
-        rospy.loginfo("process seq: {}".format(rgb_img_msg.header.seq))
-        try:
-            rgb_image = self.bridge.imgmsg_to_cv2(rgb_img_msg, "bgr8")
-        except CvBridgeError as e:
-            rospy.loginfo(e)
-            
-        output = self.trt_packnet.infer_depth(rgb_image)
-
-        output_data = torch.Tensor(output).reshape((1, 1, 288, 384))
-
-        # resize from PIL image and cv2 has different convention about the image shape 
-        pred_inv_depth_resized = interpolate_image(output_data, (self.original_input_shape[0], self.original_input_shape[1]), mode='bilinear', align_corners=False)
-        
-        # convert inverse depth to depth image
+    def _postprocess(self, net_output, original_size, mode='bilinear', align_corners=False):
+        pred_inv_depth_resized = interpolate_image(net_output, (original_size[0], original_size[1]), mode, align_corners)
         depth_img = self.write_depth(self.inv2depth(pred_inv_depth_resized))
-
-        depth_img_msg = self.bridge.cv2_to_imgmsg(depth_img, encoding="mono16")
-
-        # define the header
-        rgb_img_msg.header.stamp = rospy.Time.now()
-        depth_img_msg.header.stamp = rospy.Time.now()
-        rgb_img_msg.header.frame_id = "left_image"
-        depth_img_msg.header.frame_id = "left_image"
-        depth_img_msg.header.seq = rgb_img_msg.header.seq
         
-        # publish the image and depth_image
-        self.pub_rgb_image.publish(rgb_img_msg)
-        self.pub_depth_image.publish(depth_img_msg)
+        return depth_img
 
     def inv2depth(self, inv_depth):
         """
@@ -218,6 +142,86 @@ class DepthInference(object):
 
         return depth
 
+    def infer_depth(self, img):
+        _img_h, _img_w, _ = img.shape
+        img_resized = self._preprocess(img)
+        # print(type(img_resized), img_resized.shape)
+
+        np.copyto(self.host_inputs[0], img_resized.ravel())
+
+        if self.cuda_ctx:
+            self.cuda_ctx.push()
+        cuda.memcpy_htod_async(
+            self.cuda_inputs[0], self.host_inputs[0], self.stream)
+
+        self.context.execute_async(
+            batch_size=1,
+            bindings=self.bindings,
+            stream_handle=self.stream.handle)
+        cuda.memcpy_dtoh_async(
+            self.host_outputs[0], self.cuda_outputs[0], self.stream)
+        self.stream.synchronize()
+        if self.cuda_ctx:
+            self.cuda_ctx.pop()
+
+        net_output = torch.Tensor(self.host_outputs[0]).reshape((1, 1, NET_INPUT_H, NET_INPUT_W))
+
+        return self._postprocess(net_output, original_size=(_img_h, _img_w))
+
+
+
+class DepthInference(object):
+    def __init__(self):
+        self.bridge = CvBridge()
+        ## Communication
+        # queue_size=None to process only the last message
+        rospy.loginfo("Setting up publisher and subscriber ..")
+        self.pub_rgb_image = rospy.Publisher('/packnet/color/image_raw', Image, queue_size=1)
+        self.pub_depth_image = rospy.Publisher('/packnet/depth/image_raw', Image, queue_size=1)
+
+        rospy.Subscriber("/camera/color/image_raw", Image, self.cb_image, queue_size=1)
+
+        self.cuda_ctx = cuda.Device(0).make_context()
+        self.trt_packnet = TrtPacknet()
+
+        rospy.loginfo("Ready")
+    
+    def __del__(self):
+        self.cuda_ctx.pop()
+        del self.trt_packnet
+        del self.cuda_ctx
+
+    def clean_up(self):
+        """ Backup destructor: Release cuda memory """
+        if self.trt_packnet is not None:
+            self.cuda_ctx.pop()
+            del self.trt_packnet
+            del self.cuda_ctx
+
+    def process(self, rgb_img_msg):
+
+        rospy.loginfo("process seq: {}".format(rgb_img_msg.header.seq))
+        try:
+            rgb_image = self.bridge.imgmsg_to_cv2(rgb_img_msg, "bgr8")
+        except CvBridgeError as e:
+            rospy.loginfo(e)
+            return
+            
+        depth_img = self.trt_packnet.infer_depth(rgb_image)
+
+        depth_img_msg = self.bridge.cv2_to_imgmsg(depth_img, encoding="mono16")
+
+        # define the header
+        rgb_img_msg.header.stamp = rospy.Time.now()
+        depth_img_msg.header.stamp = rospy.Time.now()
+        rgb_img_msg.header.frame_id = "left_image"
+        depth_img_msg.header.frame_id = "left_image"
+        depth_img_msg.header.seq = rgb_img_msg.header.seq
+        
+        # publish the image and depth_image
+        self.pub_rgb_image.publish(rgb_img_msg)
+        self.pub_depth_image.publish(depth_img_msg)
+
     def cb_image(self, data):
         
         self.original_input_shape = (data.height, data.width)
@@ -228,8 +232,7 @@ class DepthInference(object):
 if __name__ == "__main__":
     depth_inference_node = DepthInference()
     rospy.init_node('packnet_sfm_node')
-    rospy.loginfo("Ready to infer")
-    hvd_init()
+    rospy.loginfo("Ready to do inference")
     try:
         rospy.spin()
     except KeyboardInterrupt:

@@ -9,16 +9,17 @@ from cv2 import imwrite
 
 from packnet_sfm.utils.image import load_image
 from packnet_sfm.datasets.augmentations import resize_image, to_tensor
-from packnet_sfm.utils.depth import write_depth, inv2depth, viz_inv_depth
 
-ONNX_FILE_PATH = '/home/nvadmin/TensorRT-7.1.3.4/samples/python/onnx_packnet/model.onnx'
+ONNX_FILE_PATH = '/home/nvadmin/packnet_ws/src/packnet_sfm_ros/ros/trt_packnet_sfm/src/packnet_kitti.onnx'
+MODEL_NAME = "packnet_kitti.trt"
+NET_INPUT_W = 192
+NET_INPUT_H = 640
+MAX_BATCH_SIZE = 1
+MAX_GPU_MEM = 12
 
 # logger to capture errors, warnings, and other information during the build and inference phases
 TRT_LOGGER = trt.Logger()
-logging_time = False
 
-MAX_BATCH_SIZE = 1
-MAX_GPU_MEM = 1
 
 def build_engine(onnx_file_path):
     # initialize TensorRT engine and parse ONNX model
@@ -33,7 +34,7 @@ def build_engine(onnx_file_path):
         parser.parse(model.read())
     print('Completed parsing of ONNX file')
 
-    # allow TensorRT to use up to 1GB of GPU memory for tactic selection
+    # allow TensorRT to use up to MAX_GPU_MEM GB of GPU memory for tactic selection
     builder.max_workspace_size = MAX_GPU_MEM << 30
 
     # we have only one image in batch
@@ -44,7 +45,7 @@ def build_engine(onnx_file_path):
         builder.fp16_mode = True
     
         # generate TensorRT engine optimized for the target platform
-    print('Building an engine...')
+    print('Building an engine, this will take a while ...')
     tic = time.time()
     engine = builder.build_cuda_engine(network)
     toc = time.time()
@@ -55,7 +56,7 @@ def build_engine(onnx_file_path):
 
 def preprocess_data(input_file):
 
-    image_shape = (288, 384)
+    image_shape = (NET_INPUT_H, NET_INPUT_W)
     # Load image
     image = load_image(input_file)
     # Resize and to tensor
@@ -72,7 +73,7 @@ def main():
     if engine is None:
         raise SystemExit('ERROR: failed to build the TensorRT engine!')
 
-    engine_path = '%s.trt' % "packnet_sfm"
+    engine_path = MODEL_NAME
     with open(engine_path, 'wb') as f:
         f.write(engine.serialize())
     print('Serialized the TensorRT engine to file: %s' % engine_path)

@@ -6,12 +6,13 @@ import argparse
 import onnx_graphsurgeon as gs
 from post_processing import *
 
-from packnet_sfm.networks.depth.PackNet01 import PackNet01
-
 from packnet_sfm.models.model_wrapper import ModelWrapper
 from packnet_sfm.utils.config import parse_test_file
 
-PACKNET_TRAINED_WEIGHT = "/home/nvadmin/packnet_ws/src/packnet_sfm_ros/trained_models/tello_custom.ckpt"
+CKPT_FILE_PATH = "/home/nvadmin/packnet_ws/src/packnet_sfm_ros/trained_models/PackNet01_MR_velsup_CStoK.ckpt"
+MODEL_NAME = "packnet_kitti.onnx"
+NET_INPUT_W = 640
+NET_INPUT_H = 192
 
 def post_process_packnet(model_file, opset=11):
     """
@@ -44,10 +45,10 @@ def build_packnet(model_file, args):
     """
     Construct the packnet network and export it to ONNX
     """
-    input_pyt = torch.randn((1, 3, 288, 384), requires_grad=False).cuda()  # same size with data augmentation
+    input_pyt = torch.randn((1, 3, NET_INPUT_H, NET_INPUT_W), requires_grad=False).cuda()  # same size with data augmentation
 
     # Build the model
-    config, state_dict = parse_test_file(PACKNET_TRAINED_WEIGHT)
+    config, state_dict = parse_test_file(CKPT_FILE_PATH)
     model_wrapper = ModelWrapper(config, load_datasets=False)
     model_wrapper.load_state_dict(state_dict)
     # print(model_wrapper.model.depth_net)
@@ -66,16 +67,16 @@ def build_packnet(model_file, args):
 
 def main():
     parser = argparse.ArgumentParser(description="Exports PackNet01 to ONNX, and post-processes it to insert TensorRT plugins")
-    parser.add_argument("-o", "--output", help="Path to save the generated ONNX model", default="../onnx_model/packnet_sfm.onnx")
+    parser.add_argument("-o", "--output", help="Path to save the generated ONNX model", default="packnet_sfm.onnx")
     parser.add_argument("-op", "--opset", type=int, help="ONNX opset to use", default=11)
     parser.add_argument("-v", "--verbose", action='store_true', help="Flag to enable verbose logging for torch.onnx.export")
     args=parser.parse_args()
 
     # Construct the packnet graph and generate the onnx graph
-    build_packnet(args.output, args)
+    build_packnet(MODEL_NAME, args)
 
     # Perform post processing on Instance Normalization and upsampling nodes and create a new ONNX graph
-    post_process_packnet(args.output, args.opset)
+    post_process_packnet(MODEL_NAME, args.opset)
 
 
 if __name__ == '__main__':
