@@ -3,19 +3,19 @@ We need to convert packnet weight (e.g. packnet.ckpt) to .ONNX format and then c
 
 Tested with `Ubuntu 18.04 LTS`, `python 3.6.9`, `TensorRT 7.1.1.3`, `PyTorch 1.4.0` and `Cuda 11.0`
 
-1) packnet_to_onnx.py
+1) `packnet_to_onnx.py`
    -   change `CKPT_FILE_PATH` to `/path/to/weight.ckpt`
    -   change `MODEL_NAME`
    -   change dimension of `input_pyt` to the network input size 
 
-2) onnx_to_trt.py
+2) `onnx_to_trt.py`
    -   change `ONNX_FILE_PATH` to `/path/to/model.onnx`
    -   change `MODEL_NAME`
-   -   change `NET_INPUT_W` and `NET_INPUT_H`
    -   change `MAX_GPU_MEM` (in GBs)
    -   change `MAX_BATCH_SIZE`, but it's usually `1`
+   Note: it usually takes around 4 mins to run this program
    
-3) trt_packnet_node
+3) `trt_packnet_node`
    -   change `CKPT_FILE_PATH` to `/path/to/weight.ckpt`
 
 # NOTE
