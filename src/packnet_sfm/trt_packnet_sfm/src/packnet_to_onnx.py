@@ -9,10 +9,10 @@ from post_processing import *
 from packnet_sfm.models.model_wrapper import ModelWrapper
 from packnet_sfm.utils.config import parse_test_file
 
-CKPT_FILE_PATH = "/home/nvadmin/packnet_ws/src/packnet_sfm_ros/trained_models/PackNet01_MR_velsup_CStoK.ckpt"
-MODEL_NAME = "packnet_kitti.onnx"
-NET_INPUT_W = 640
-NET_INPUT_H = 192
+CKPT_FILE_PATH = "/home/nvadmin/packnet_ws/src/packnet_sfm_ros/trained_models/tello_custom.ckpt"
+MODEL_NAME = "packnet_tello.onnx"
+NET_INPUT_W = 384
+NET_INPUT_H = 288
 
 def post_process_packnet(model_file, opset=11):
     """
@@ -51,7 +51,6 @@ def build_packnet(model_file, args):
     config, state_dict = parse_test_file(CKPT_FILE_PATH)
     model_wrapper = ModelWrapper(config, load_datasets=False)
     model_wrapper.load_state_dict(state_dict)
-    # print(model_wrapper.model.depth_net)
 
     model_wrapper.model.depth_net.eval()
     model_wrapper.model.depth_net.cuda()
@@ -59,9 +58,6 @@ def build_packnet(model_file, args):
     torch.onnx.export(model_wrapper.model.depth_net, input_pyt, model_file, verbose=args.verbose, opset_version=args.opset)
 
 
-    # Convert the model into ONNX
-    # model_pyt = PackNet01(version='1A')
-    # torch.onnx.export(model_pyt, input_pyt, model_file, verbose=args.verbose, opset_version=args.opset)
 
 
 

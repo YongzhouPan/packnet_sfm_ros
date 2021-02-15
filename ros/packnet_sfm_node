@@ -24,7 +24,7 @@ from packnet_sfm.utils.types import is_seq, is_tensor
 
 STEREO_SCALE_FACTOR = 1
 
-MODEL_NAME = "PackNet01_MR_velsup_CStoK.ckpt"
+MODEL_NAME = "tello_custom.ckpt"
 starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
 
 class DepthInference:

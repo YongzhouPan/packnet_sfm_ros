@@ -10,10 +10,10 @@ from cv2 import imwrite
 from packnet_sfm.utils.image import load_image
 from packnet_sfm.datasets.augmentations import resize_image, to_tensor
 
-ONNX_FILE_PATH = '/home/nvadmin/packnet_ws/src/packnet_sfm_ros/ros/trt_packnet_sfm/src/packnet_kitti.onnx'
-MODEL_NAME = "packnet_kitti.trt"
-NET_INPUT_W = 192
-NET_INPUT_H = 640
+ONNX_FILE_PATH = '/home/nvadmin/packnet_ws/src/packnet_sfm_ros/src/packnet_sfm/trt_packnet_sfm/src/packnet_tello.onnx'
+MODEL_NAME = "packnet_tello.trt"
+NET_INPUT_W = 384
+NET_INPUT_H = 288
 MAX_BATCH_SIZE = 1
 MAX_GPU_MEM = 12
 
@@ -53,19 +53,6 @@ def build_engine(onnx_file_path):
         print('Completed creating engine in {} s.'.format(toc - tic))
 
     return engine
-
-def preprocess_data(input_file):
-
-    image_shape = (NET_INPUT_H, NET_INPUT_W)
-    # Load image
-    image = load_image(input_file)
-    # Resize and to tensor
-    image = resize_image(image, image_shape)
-    image = to_tensor(image).unsqueeze(0)
-
-    return image
-
-# def postprocess(output_data):
     
 def main():
     # initialize TensorRT engine and parse ONNX model
@@ -78,12 +65,5 @@ def main():
         f.write(engine.serialize())
     print('Serialized the TensorRT engine to file: %s' % engine_path)
 
-
-
-
-
 if __name__ == '__main__':
     main()
-    # output = preprocess_data("/home/nvadmin/TensorRT-7.1.3.4/samples/python/onnx_packnet/000000.png")
-    # print(output.shape)
-    # print(output.numpy().shape)
