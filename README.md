@@ -13,6 +13,7 @@ Tested with `Ubuntu 18.04 LTS`, `python 3.6.9`, `TensorRT 7.1.1.3`, `PyTorch 1.4
    -   change `MODEL_NAME`
    -   change `MAX_GPU_MEM` (in GBs)
    -   change `MAX_BATCH_SIZE`, but it's usually `1`
+   Note: it usually takes around 4 mins to run this program
    
 3) `trt_packnet_node`
    -   change `CKPT_FILE_PATH` to `/path/to/weight.ckpt`
