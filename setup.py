@@ -1,5 +1,9 @@
 ## ! DO NOT MANUALLY INVOKE THIS setup.py, USE CATKIN INSTEAD
 # ref: https://www.ros.org/reps/rep-0008.html
+# ref: http://docs.ros.org/en/api/catkin/html/howto/format2/installing_python.html
+'''
+This is used to install python custom package to the install space of catkin workspace
+'''
 from distutils.core import setup
 from catkin_pkg.python_setup import generate_distutils_setup
 
@@ -17,6 +21,7 @@ setup_args = generate_distutils_setup(
               'packnet_sfm.networks.pose',
               'packnet_sfm.trainers',
               'packnet_sfm.utils',
+              'trt_packnet',
               'configs'],
     package_dir={'': 'src'},
 )

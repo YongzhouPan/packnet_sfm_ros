@@ -14,17 +14,17 @@ from cv_bridge import CvBridge, CvBridgeError
 import packnet_sfm
 
 from packnet_sfm.models.model_wrapper import ModelWrapper
-from packnet_sfm.datasets.augmentations import resize_image, to_tensor
-from packnet_sfm.utils.horovod import hvd_init, rank, world_size, print0
-from packnet_sfm.utils.image import load_image, interpolate_image
+from packnet_sfm.datasets.augmentations import to_tensor
+from packnet_sfm.utils.horovod import hvd_init, rank
+from packnet_sfm.utils.image import interpolate_image
 from packnet_sfm.utils.config import parse_test_file
-from packnet_sfm.utils.load import set_debug
-from packnet_sfm.utils.depth import write_depth, inv2depth, viz_inv_depth
-from packnet_sfm.utils.logging import pcolor
+from packnet_sfm.utils.depth import inv2depth
 
 from packnet_sfm.utils.types import is_seq, is_tensor
 
-MODEL_NAME = "PackNet01_MR_velsup_CStoK.ckpt"
+STEREO_SCALE_FACTOR = 1
+
+MODEL_NAME = "tello_custom.ckpt"
 starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
 
 class DepthInference:
@@ -40,12 +40,12 @@ class DepthInference:
 
         ## Communication
         # queue_size=None to process only the last message
-        self.pub_rgb_image = rospy.Publisher('/camera/color/image_raw', Image, queue_size=None)
-        self.pub_depth_image = rospy.Publisher('/camera/depth/image_raw', Image, queue_size=None)
+        self.pub_rgb_image = rospy.Publisher('/packnet/color/image_raw', Image, queue_size=1)
+        self.pub_depth_image = rospy.Publisher('/packnet/depth/image_raw', Image, queue_size=1)
 
-        rospy.Subscriber("/video/image_raw", Image, self.cb_image, queue_size=1)
+        rospy.Subscriber("/camera/color/image_raw", Image, self.cb_image, queue_size=1)
 
-        rospy.spin()
+        
 
     def set_model_wrapper(self):
         rospack = rospkg.RosPack()
@@ -93,7 +93,7 @@ class DepthInference:
         pred_inv_depth = self.model_wrapper.depth(rgb_image)
 
         # resize from PIL image and cv2 has different convention about the image shape 
-        pred_inv_depth_resized = interpolate_image(pred_inv_depth, (self.original_input_shape[0], self.original_input_shape[1]), mode='bicubic')
+        pred_inv_depth_resized = interpolate_image(pred_inv_depth, (self.original_input_shape[0], self.original_input_shape[1]), mode='bilinear', align_corners=False)
         
         # convert inverse depth to depth image
         depth_img = self.write_depth(self.inv2depth(pred_inv_depth_resized))
@@ -134,7 +134,7 @@ class DepthInference:
         if is_seq(inv_depth):
             return [inv2depth(item) for item in inv_depth]
         else:
-            return 1. / inv_depth
+            return 1. * STEREO_SCALE_FACTOR / inv_depth
 
 
     def write_depth(self, depth):
@@ -169,6 +169,10 @@ class DepthInference:
 
 
 if __name__ == "__main__":
-    rospy.init_node('packnet_sfm_node')
-    hvd_init()
     depth_inference_node = DepthInference()
+    rospy.init_node('packnet_sfm_node')
+    rospy.loginfo("Ready to do inference")
+    try:
+        rospy.spin()
+    except KeyboardInterrupt:
+        print("Shutting down")
