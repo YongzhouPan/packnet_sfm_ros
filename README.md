@@ -11,7 +11,6 @@ Tested with `Ubuntu 18.04 LTS`, `python 3.6.9`, `TensorRT 7.1.1.3`, `PyTorch 1.4
 2) `onnx_to_trt.py`
    -   change `ONNX_FILE_PATH` to `/path/to/model.onnx`
    -   change `MODEL_NAME`
-   -   change `NET_INPUT_W` and `NET_INPUT_H`
    -   change `MAX_GPU_MEM` (in GBs)
    -   change `MAX_BATCH_SIZE`, but it's usually `1`
    
