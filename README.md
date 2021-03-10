@@ -15,8 +15,21 @@ Tested with `Ubuntu 18.04 LTS`, `python 3.6.9`, `TensorRT 7.1.1.3`, `PyTorch 1.4
    -   change `MAX_BATCH_SIZE`, but it's usually `1`
    Note: it usually takes around 4 mins to run this program
    
+``` bash
+source install/setup.bash --extend 
+cd ~/packnet_ws/src/packnet_sfm_ros/src/trt_packnet/src
+
+# to make onnx file
+python3 packnet_to_onnx.py
+
+# to make trt file
+python3 packnet_to_onnx.py
+```
+   
 3) `trt_packnet_node`
    -   change `CKPT_FILE_PATH` to `/path/to/weight.ckpt`
+
+
 
 # NOTE
 
