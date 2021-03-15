@@ -6,13 +6,14 @@ Tested with `Ubuntu 18.04 LTS`, `python 3.6.9`, `TensorRT 7.1.1.3`, `PyTorch 1.4
 1) `packnet_to_onnx.py`
    -   change `CKPT_FILE_PATH` to `/path/to/weight.ckpt`
    -   change `MODEL_NAME`
-   -   change dimension of `input_pyt` to the network input size 
+   -   change dimension of `NET_INPUT_W` and `NET_INPUT_H` to the network input size 
 
 2) `onnx_to_trt.py`
    -   change `ONNX_FILE_PATH` to `/path/to/model.onnx`
    -   change `MODEL_NAME`
    -   change `MAX_GPU_MEM` (in GBs)
    -   change `MAX_BATCH_SIZE`, but it's usually `1`
+   -   change dimension of `NET_INPUT_W` and `NET_INPUT_H` to the network input size 
    Note: it usually takes around 4 mins to run this program
    
 ``` bash
@@ -27,7 +28,8 @@ python3 packnet_to_onnx.py
 ```
    
 3) `trt_packnet_node`
-   -   change `CKPT_FILE_PATH` to `/path/to/weight.ckpt`
+   -   change `TRT_FILE_PATH` to `/path/to/weight.trt`
+   -   change `NET_INPUT_H_W`
 
 
 
