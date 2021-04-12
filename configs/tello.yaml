@@ -7,7 +7,7 @@ checkpoint:
     save_top_k: -1
 
 model:
-    checkpoint_path: /workspace/packnet-sfm/results/chept/hearty-wood-10/epoch=04_optitrack_1-optitrack_1_part1-loss=0.000.ckpt
+    # checkpoint_path: /workspace/packnet-sfm/results/chept/hearty-wood-10/epoch=04_optitrack_1-optitrack_1_part1-loss=0.000.ckpt
     name: 'SelfSupModel'
     optimizer:
         name: 'Adam'
@@ -38,100 +38,90 @@ datasets:
         # image_shape: (32, 32)
 
     train:
-        batch_size: 8
+        batch_size: 4
         dataset: ['KITTI']
-        path: ['/data/datasets/tello/aigc',
-               '/data/datasets/tello/aigc',
-               '/data/datasets/tello/aigc',
-               '/data/datasets/tello/aigc',
-               '/data/datasets/tello/aigc',
+        path: ['/data/datasets/tello_crop/tello_crop_exp_room',
+               '/data/datasets/tello_crop/tello_crop_exp_room',
+               '/data/datasets/tello_crop/tello_crop_exp_room',
+               '/data/datasets/tello_crop/tello_crop_exp_room',
+               '/data/datasets/tello_crop/tello_crop_exp_room',
+               '/data/datasets/tello_crop/tello_crop_exp_room',
+               '/data/datasets/tello_crop/tello_crop_exp_room',
 
-               '/data/datasets/tello/jw_dh_desk',
-               '/data/datasets/tello/jw_dh_desk',
-               '/data/datasets/tello/jw_dh_desk',
-               '/data/datasets/tello/jw_dh_desk',
+               '/data/datasets/tello_crop/tello_crop_exp_roombackward',
+               '/data/datasets/tello_crop/tello_crop_exp_roombackward',
+               '/data/datasets/tello_crop/tello_crop_exp_roombackward',
+               '/data/datasets/tello_crop/tello_crop_exp_roombackward',
+
+               '/data/datasets/tello_crop/tello_crop_exp_roombackward_2',
+               '/data/datasets/tello_crop/tello_crop_exp_roombackward_2',
+               '/data/datasets/tello_crop/tello_crop_exp_roombackward_2',
                
-               '/data/datasets/tello/my_desk',
-               '/data/datasets/tello/my_desk',
+               '/data/datasets/tello_crop/tello_crop_my_desk',
+               '/data/datasets/tello_crop/tello_crop_my_desk',
+               '/data/datasets/tello_crop/tello_crop_my_desk',
+               '/data/datasets/tello_crop/tello_crop_my_desk',
+               '/data/datasets/tello_crop/tello_crop_my_desk',
+
+               '/data/datasets/tello_crop/tello_crop_workshop',
+               '/data/datasets/tello_crop/tello_crop_workshop',
+               '/data/datasets/tello_crop/tello_crop_workshop',
+
+               '/data/datasets/tello_crop/tello_crop_workshop_rightside',
+               '/data/datasets/tello_crop/tello_crop_workshop_rightside',
+
+               '/data/datasets/tello_crop/tello_crop_bed',
                
-               '/data/datasets/tello/workbench_boxes_low_alt',
-               '/data/datasets/tello/workbench_boxes_low_alt',
-               
-               '/data/datasets/tello/workbench_boxes_low_alt_2',
-               '/data/datasets/tello/workbench_boxes_low_alt_2',
-               
-               '/data/datasets/tello/workbench_with_boxes',
-               '/data/datasets/tello/workbench_with_boxes',
-               '/data/datasets/tello/workbench_with_boxes',
-               
-               '/data/datasets/tello/optitrack_1',
-
-               '/data/datasets/tello/optitrack_2',
-               '/data/datasets/tello/optitrack_2',
-
-               '/data/datasets/tello/optitrack_3',
+               '/data/datasets/tello_crop/tello_crop_boat'
 
 
-               '/data/datasets/tello/optitrack_4',
-
-               '/data/datasets/tello/optitrack_5',
-               '/data/datasets/tello/optitrack_5',
-
-               '/data/datasets/tello/optitrack_6',
                ]
-        split: ['seq01_split.txt', 
-                'seq02_split.txt', 
-                'seq03_split.txt', 
-                'seq05_split.txt',
-                'seq06_split.txt',
+        split: ['tello_crop_exp_room_part1.txt',
+                'tello_crop_exp_room_part2.txt',
+                'tello_crop_exp_room_part3.txt',
+                'tello_crop_exp_room_part5.txt',
+                'tello_crop_exp_room_part6.txt',
+                'tello_crop_exp_room_part7.txt',
+                'tello_crop_exp_room_part8.txt',
 
-                'jw_dh_desk_part1.txt',
-                'jw_dh_desk_part2.txt',
-                'jw_dh_desk_part3.txt',
-                'jw_dh_desk_part4.txt',
+                'tello_crop_exp_roombackward_part1.txt',
+                'tello_crop_exp_roombackward_part2.txt',
+                'tello_crop_exp_roombackward_part3.txt',
+                'tello_crop_exp_roombackward_part4.txt',
+
+                'tello_crop_exp_roombackward_2_part1.txt',
+                'tello_crop_exp_roombackward_2_part2.txt',
+                'tello_crop_exp_roombackward_2_part3.txt',
+
+                'tello_crop_my_desk_part1.txt',
+                'tello_crop_my_desk_part2.txt',
+                'tello_crop_my_desk_part3.txt',
+                'tello_crop_my_desk_part4.txt',
+                'tello_crop_my_desk_part5.txt',
+
+                'tello_crop_workshop_part1.txt',
+                'tello_crop_workshop_part2.txt',
+                'tello_crop_workshop_part3.txt',
+
+                'tello_crop_workshop_rightside_part1.txt',
+                'tello_crop_workshop_rightside_part2.txt',
+
+                'tello_crop_bed_part1.txt',
+                'tello_crop_boat_part1.txt',
+
                 
-                'my_desk_part1.txt',
-                'my_desk_part2.txt',
-                
-                'workbench_boxes_low_alt_part1.txt',
-                'workbench_boxes_low_alt_part2.txt',
-                
-                'workbench_boxes_low_alt_2_part1.txt',
-                'workbench_boxes_low_alt_2_part2.txt',
-                
-                'workbench_with_boxes_part1.txt',
-                'workbench_with_boxes_part2.txt',
-                'workbench_with_boxes_part3.txt',
-                
-                'optitrack_1_part1.txt',
-
-                'optitrack_2_part1.txt',
-                'optitrack_2_part2.txt',
-
-                'optitrack_3_part1.txt',
-
-                'optitrack_4_part1.txt',
-
-                'optitrack_5_part1.txt',
-                'optitrack_5_part1.txt',
-
-                'optitrack_6_part1.txt'
                 ]
         repeat: [3]
     validation:
         dataset: ['KITTI']
-        path: ['/data/datasets/tello/optitrack_1',
-               '/data/datasets/tello/optitrack_3',
-               '/data/datasets/tello/optitrack_4',
-               '/data/datasets/tello/aigc']
-        split: ['optitrack_1_part1.txt',
-                'optitrack_3_part2.txt',
-                'optitrack_4_part1.txt',
-                'seq04_split.txt']
-    # test:
-    #     dataset: ['KITTI']
-    #     path: ['/data/datasets/rolling_shutter_rect']
-    #     split: ['seq04_split.txt']
+        path: ['/data/datasets/tello_crop/tello_crop_exp_room',
+               '/data/datasets/tello_crop/tello_crop_exp_room',
+
+                
+              ]
+        split: ['tello_crop_exp_room_part1.txt',
+                'tello_crop_exp_room_part4.txt',
+                ]
 
 wandb:
     dry_run: False
