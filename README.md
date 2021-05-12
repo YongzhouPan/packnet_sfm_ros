@@ -1,14 +1,24 @@
 # How to prepare TensorRT model
 We need to convert packnet weight (e.g. packnet.ckpt) to .ONNX format and then convert it to .trt format
 
-Tested with `Ubuntu 18.04 LTS`, `python 3.6.9`, `TensorRT 7.1.1.3`, `PyTorch 1.4.0` and `Cuda 11.0`
+Tested with `Ubuntu 18.04 LTS`, `python 3.6.9`, `TensorRT-7.1.3.4`, `PyTorch 1.4.0`, `Cuda 11.0` and `CuDNN 8.0.5`
 
-1) `packnet_to_onnx.py`
+NOTE: I tried with Pytorch 1.8.1 with CUDA 11.1 doesn't work
+
+1) TensorRT can be installed following this [guide](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#installing-tar). Note that `onnx` and `onnx-graphsurgeon` need to be installed with pip3
+
+```bash
+pip3 install onnx
+pip3 install nvidia-pyindex
+pip3 install onnx-graphsurgeon
+```
+
+2) `packnet_to_onnx.py`
    -   change `CKPT_FILE_PATH` to `/path/to/weight.ckpt`
    -   change `MODEL_NAME`
    -   change dimension of `NET_INPUT_W` and `NET_INPUT_H` to the network input size 
 
-2) `onnx_to_trt.py`
+3) `onnx_to_trt.py`
    -   change `ONNX_FILE_PATH` to `/path/to/model.onnx`
    -   change `MODEL_NAME`
    -   change `MAX_GPU_MEM` (in GBs)
