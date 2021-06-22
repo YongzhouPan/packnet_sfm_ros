@@ -10,10 +10,17 @@ from cv2 import imwrite
 from packnet_sfm.utils.image import load_image
 from packnet_sfm.datasets.augmentations import resize_image, to_tensor
 
-ONNX_FILE_PATH = '/home/nvadmin/packnet_ws/src/packnet_sfm_ros/src/packnet_sfm/trt_packnet_sfm/src/packnet_tello.onnx'
-MODEL_NAME = "packnet_tello.trt"
-NET_INPUT_W = 384
-NET_INPUT_H = 288
+# ONNX_FILE_PATH = '/home/nvadmin/jy_ws/packnet_ros_ws/src/packnet_tello_crop.onnx'
+# MODEL_NAME = "packnet_tello_crop.trt"
+# NET_INPUT_W = 384
+# NET_INPUT_H = 288
+# MAX_BATCH_SIZE = 1
+# MAX_GPU_MEM = 4
+
+ONNX_FILE_PATH = '/home/nvadmin/jy_ws/packnet_ros_ws/src/packnet_sfm_ros/packnet_KITTI_FR.onnx'
+MODEL_NAME = "packnet_KITTI_FR.trt"
+NET_INPUT_W = 1280
+NET_INPUT_H = 384
 MAX_BATCH_SIZE = 1
 MAX_GPU_MEM = 12
 

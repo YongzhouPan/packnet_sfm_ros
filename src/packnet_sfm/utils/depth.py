@@ -53,13 +53,13 @@ def write_depth(filename, depth, intrinsics=None):
         # torch.cuda.synchronize()
         # start_time = time.perf_counter()
         depth = depth.detach().squeeze().cpu()  # This is the bottle neck of 300mss
-        torch.cuda.synchronize()
+        # torch.cuda.synchronize()
         # end_time = time.perf_counter()
         # print("The download from gpu ", end_time - start_time)
         depth2 = depth.numpy()
         depth2 = cv2.resize(src=depth2, dsize=(1226, 370))
         # print(depth2.shape)
-        depth2 = np.clip(depth2, 0, 80)
+        depth2 = np.clip(depth2, 0, 100)
 
     # If intrinsics is a tensor
     if is_tensor(intrinsics):

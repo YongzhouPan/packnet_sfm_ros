@@ -5,14 +5,21 @@ import numpy as np
 import argparse
 import onnx_graphsurgeon as gs
 from post_processing import *
+from packnet_sfm.utils.horovod import hvd_init
+
 
 from packnet_sfm.models.model_wrapper import ModelWrapper
 from packnet_sfm.utils.config import parse_test_file
 
-CKPT_FILE_PATH = "/home/nvadmin/packnet_ws/src/packnet_sfm_ros/trained_models/tello_custom.ckpt"
-MODEL_NAME = "packnet_tello.onnx"
-NET_INPUT_W = 384
-NET_INPUT_H = 288
+# CKPT_FILE_PATH = "/home/nvadmin/jy_ws/packnet_ros_ws/src/packnet_sfm_ros/trained_models/tello_crop_thesis.ckpt"
+# MODEL_NAME = "packnet_tello_crop.onnx"
+# NET_INPUT_W = 384
+# NET_INPUT_H = 288
+
+CKPT_FILE_PATH = "/home/nvadmin/jy_ws/packnet_ros_ws/src/packnet_sfm_ros/trained_models/PackNet01_HR_velsup_CStoK.ckpt"
+MODEL_NAME = "packnet_KITTI_FR.onnx"
+NET_INPUT_W = 1280
+NET_INPUT_H = 384
 
 def post_process_packnet(model_file, opset=11):
     """
@@ -68,6 +75,7 @@ def main():
     parser.add_argument("-v", "--verbose", action='store_true', help="Flag to enable verbose logging for torch.onnx.export")
     args=parser.parse_args()
 
+    hvd_init()
     # Construct the packnet graph and generate the onnx graph
     build_packnet(MODEL_NAME, args)
 

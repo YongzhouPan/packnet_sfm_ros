@@ -11,10 +11,15 @@ from cv_bridge import CvBridge, CvBridgeError
 
 from trt_packnet.trt_packnet import TrtPacknet
 
-STEREO_SCALE_FACTOR = 30
+import time
 
-TRT_FILE_PATH = "/home/nvadmin/packnet_ws/src/packnet_sfm_ros/src/trt_packnet/src/packnet_tello.trt"
-NET_INPUT_H_W = (288, 384)
+STEREO_SCALE_FACTOR = 2.8
+
+TRT_FILE_PATH = "/home/nvadmin/jy_ws/packnet_ros_ws/src/packnet_sfm_ros/packnet_KITTI_HR.trt"
+# NET_INPUT_H_W = (288, 384)
+# NET_INPUT_H_W = (384, 1280)
+NET_INPUT_H_W = (192, 640)
+
 
 class DepthInference(object):
     def __init__(self):
@@ -32,6 +37,7 @@ class DepthInference(object):
 
         self.cuda_ctx = cuda.Device(0).make_context()
         self.trt_packnet = TrtPacknet(TRT_FILE_PATH, NET_INPUT_H_W, STEREO_SCALE_FACTOR)
+        self.time_max = 0
 
         rospy.loginfo("Ready")
     
@@ -72,8 +78,13 @@ class DepthInference(object):
 
     def cb_image(self, data):
         self.original_input_shape = (data.height, data.width)
-        rospy.loginfo("process seq: {}".format(data.header.seq))
+        start = time.time()
         self.process(data)
+        process_time = time.time() - start
+        if process_time >= self.time_max and process_time < 0.1:
+            self.time_max = process_time
+        rospy.loginfo("process seq: {}, time: {:03f}, max time: {:03f}".format(data.header.seq, process_time, self.time_max))
+
 
 
 if __name__ == "__main__":
