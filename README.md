@@ -60,19 +60,16 @@ wget https://tri-ml-public.s3.amazonaws.com/github/packnet-sfm/models/PackNet01_
 
 2) Change the model name in this [line](https://github.com/surfii3z/packnet_sfm_ros/blob/94edecfcd0d96c66330ab3c54133eb37ad286969/ros/packnet_sfm_node#L27) of the packnet_sfm_node file
 
-3) Build the package
+
+3) Build the package and Try to run the node
 ```bash
 cd /path/to/packnet_ros_ws
 catkin build
-```
-
-4) Try to run the node
-```bash
+source install/setup.bash --extend 
 rosrun packnet_sfm_ros packnet_sfm_node
 ```
-________________________________________________________________
-
-# How to prepare TensorRT model
+### Quick Start with TensorRT
+## How to prepare TensorRT model
 We need to convert packnet weight (e.g. packnet.ckpt) to .ONNX format and then convert it to .trt format
 
 Tested with `Ubuntu 18.04 LTS`, `python 3.6.9`, `TensorRT-7.1.3.4`, `PyTorch 1.4.0`, `Cuda 11.0` and `CuDNN 8.0.5`
@@ -87,12 +84,12 @@ pip3 install nvidia-pyindex
 pip3 install onnx-graphsurgeon
 ```
 
-2) `packnet_to_onnx.py`
+2) In `packnet_to_onnx.py`
    -   change `CKPT_FILE_PATH` to `/path/to/weight.ckpt`
    -   change `MODEL_NAME`
    -   change dimension of `NET_INPUT_W` and `NET_INPUT_H` to the network input size 
 
-3) `onnx_to_trt.py`
+3) In `onnx_to_trt.py`
    -   change `ONNX_FILE_PATH` to `/path/to/model.onnx`
    -   change `MODEL_NAME`
    -   change `MAX_GPU_MEM` (in GBs)
@@ -111,9 +108,17 @@ python3 packnet_to_onnx.py
 python3 packnet_to_onnx.py
 ```
    
-3) `trt_packnet_node`
+4) In `trt_packnet_node`
    -   change `TRT_FILE_PATH` to `/path/to/weight.trt`
    -   change `NET_INPUT_H_W`
+
+5) Build the package and run the node
+```bash
+cd /path/to/packnet_ros_ws
+catkin build
+source install/setup.bash --extend 
+rosrun packnet_sfm_ros packnet_sfm_node
+```
 
 ___________________________________________________________________________________________________________________
 # BELOW IS THE ORIGINAL README from the original repo
