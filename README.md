@@ -1,3 +1,77 @@
+## General information
+This is the monocular depth estimation module, which is wrapped in ROS, based on the state-of-the-art [packnet-sfm](https://github.com/TRI-ML/packnet-sfm) (CVPR, 2020).
+
+### Features
+- ROS => allows online inference over ROS image topic 
+- TensorRT-accelerated (Optional)
+
+## Installation
+1) Make the `packnet_ros_ws` and install dependencies
+```bash
+sudo apt-get install python3-pip python3-yaml
+sudo pip3 install rospkg catkin_pkg
+sudo apt-get install python-catkin-tools python3-dev python3-numpy
+
+# yacs, matplotlib, termcolor, horovod, tqdm, wandb (basically everything with ModuleNotFoundError)
+pip3 install yacs matplotlib termcolor horovod tqdm wandb
+
+# Install `PyTorch 1.4.0` (**Version is important**, otherwise it's not compatible with TensorRT, graphsurgeon, etc.)
+pip3 install torch==1.4.0 torchvision==0.5.0
+mkdir -p \path\to\packnet_ros_ws\src
+```
+2) Configure ROS to be able to use with Python3 and cv_bridge following this [link](https://medium.com/@beta_b0t/how-to-setup-ros-with-python-3-44a69ca36674)
+```bash
+# Install cv_bridge for python3
+cd /path/to/packnet_ros_ws/src
+git clone -b melodic https://github.com/ros-perception/vision_opencv.git
+
+# Config the workspace to work with python3
+cd /path/to/packnet_ros_ws
+catkin config -DPYTHON_EXECUTABLE=/usr/bin/python3 -DPYTHON_INCLUDE_DIR=/usr/include/python3.6m -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.6m.so
+catkin config --install
+catkin build
+
+# we need to always source this directory, after building
+source install/setup.bash --extend 
+```
+
+3) Install `packnet_sfm_ros`
+```bash
+cd /path/to/packnet_ros_ws/src
+git clone https://github.com/surfii3z/packnet_sfm_ros.git
+```
+
+4) Build the package
+```bash
+cd /path/to/packnet_ros_ws
+catkin build
+```
+## Quick start
+1) Download the pre-train model to `/path/to/packnet_ros_ws/src/packnet_sfm_ros/trained_models`
+
+```bash
+cd /path/to/packnet_ros_ws/src/packnet_sfm_ros
+mkdir trained_models
+cd trained_models
+
+# For example: download PackNet, Self-Supervised Scale-Aware, 192x640, CS → K
+wget https://tri-ml-public.s3.amazonaws.com/github/packnet-sfm/models/PackNet01_MR_velsup_CStoK.ckpt
+```
+
+2) Change the model name in this [line](https://github.com/surfii3z/packnet_sfm_ros/blob/94edecfcd0d96c66330ab3c54133eb37ad286969/ros/packnet_sfm_node#L27) of the packnet_sfm_node file
+
+3) Build the package
+```bash
+cd /path/to/packnet_ros_ws
+catkin build
+```
+
+4) Try to run the node
+```bash
+rosrun packnet_sfm_ros packnet_sfm_node
+```
+________________________________________________________________
+
 # How to prepare TensorRT model
 We need to convert packnet weight (e.g. packnet.ckpt) to .ONNX format and then convert it to .trt format
 
@@ -40,79 +114,6 @@ python3 packnet_to_onnx.py
 3) `trt_packnet_node`
    -   change `TRT_FILE_PATH` to `/path/to/weight.trt`
    -   change `NET_INPUT_H_W`
-
-
-
-# NOTE
-
-Use align_corners=False when doing upsampling. Follow this [link](https://machinethink.net/blog/coreml-upsampling/)
-
-## Pre-requisite
-1) Configure ROS to be able to use with Python3 and cv_bridge following this [link](https://medium.com/@beta_b0t/how-to-setup-ros-with-python-3-44a69ca36674)
-```bash
-sudo apt-get install python3-pip python3-yaml
-sudo pip3 install rospkg catkin_pkg
-sudo apt-get install python-catkin-tools python3-dev python3-numpy
-
-# Install cv_bridge for python3
-cd 
-mkdir -p packnet_ws/src
-cd packnet_ws/src
-git clone -b melodic https://github.com/ros-perception/vision_opencv.git
-
-# Config the workspace to work with python3
-cd ~/packnet_ws
-catkin config -DPYTHON_EXECUTABLE=/usr/bin/python3 -DPYTHON_INCLUDE_DIR=/usr/include/python3.6m -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.6m.so
-catkin config --install
-catkin build
-
-# we need to always source this directory, after building
-source install/setup.bash --extend 
-```
-
-2) Install some dependencies
-> pytorch: [link](https://pytorch.org/get-started/locally/)
-
-> yacs, matplotlib, termcolor, horovod, tqdm, wandb (basically everything with ModuleNotFoundError)
-
-```pip3 install yacs matplotlib termcolor horovod tqdm wandb```
-
-## Quick Start
-1) Download packnet_sfm_ros repro
-```bash
-cd ~/packnet_ws/src
-git clone https://github.com/surfii3z/packnet_sfm_ros.git
-```
-
-2) Download the pre-train model to packnet_sfm_ros/src/packnet_sfm/trained_models
-```bash
-cd ~/packnet_ws/src/packnet_sfm_ros
-mkdir trained_models
-cd trained_models
-
-# For example: download PackNet, Self-Supervised Scale-Aware, 192x640, CS → K
-wget https://tri-ml-public.s3.amazonaws.com/github/packnet-sfm/models/PackNet01_MR_velsup_CStoK.ckpt
-```
-3) Change the model name in this [line](https://github.com/surfii3z/packnet_sfm_ros/blob/1e07bfc83ef1e7946644f33d69e3805452898113/ros/packnet_sfm_node#L27) of the packnet_sfm_node file
-
-4) Build the package
-```bash
-
-catkin build
-```
-
-5) Try to run the node
-```bash
-rosrun packnet_sfm_ros packnet_sfm_node
-```
-
-# Results
-
-1) Kitti Odom seq 09 with 7DOF alignment with the ground truth (click the picture to go to the result video)
-
-<a href="https://youtu.be/QPy7ygm_McE" target="_blank">
-<img align="center" src="/media/figs/odometry_vs_GT_with_a_s_option.png" width="50%"/>
-</a>
 
 ___________________________________________________________________________________________________________________
 # BELOW IS THE ORIGINAL README from the original repo
